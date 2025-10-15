@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>JobFinder — Payment</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root{ --bg1:#08102a; --card:#0f1724; --accent:#7c3aed; --muted:#cfd6ff; }
+    *{box-sizing:border-box}
+    body{
+      margin:0; min-height:100vh; display:grid; place-items:center; font-family:Inter,system-ui; background:radial-gradient(circle at 20% 10%, #111738 0%, #071223 35%, var(--bg1) 100%); color:#fff;
+    }
+    .wrap{ width:360px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:28px; border-radius:14px; box-shadow:0 20px 60px rgba(4,6,22,0.6); text-align:center; position:relative; overflow:hidden;}
+    .greeting{ font-size:20px; font-weight:700; margin:0 0 6px; background:linear-gradient(90deg,#8b5cf6,#6366f1); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .sub { color:#d0d4e8; margin:0 0 18px; }
+    .pulse{ width:82px; height:82px; margin:12px auto 10px; border-radius:50%; background:linear-gradient(180deg,var(--accent), #5b21b6); box-shadow:0 0 28px rgba(124,58,237,0.35); animation:pulse 1.6s infinite ease-in-out; display:flex;align-items:center;justify-content:center;}
+    .pulse:after{ content:""; width:44px;height:44px;background:rgba(255,255,255,0.03); border-radius:50%; }
+    @keyframes pulse{ 0%{transform:scale(1)}50%{transform:scale(1.14)}100%{transform:scale(1)} }
+    .upi { background:#111827; padding:12px;border-radius:10px; margin:10px 0; color:#e6e6ff; font-weight:700; letter-spacing:0.3px; }
+    .btn { display:inline-block; padding:12px 16px; border-radius:10px; margin-top:12px; cursor:pointer; background:linear-gradient(90deg,var(--accent), #5b21b6); color:#fff; border:none; font-weight:700; box-shadow:0 10px 30px rgba(124,58,237,0.2); }
+    .btn.alt{ background:#2b3550; box-shadow:none; margin-left:8px; }
+    .small { color:#bfc6e9; font-size:13px; margin-top:8px; }
+    .data-list{ text-align:left; background:rgba(255,255,255,0.02); padding:10px; border-radius:8px; margin-top:12px; color:#d7d9ff; font-size:14px; }
+    /* confetti canvas */
+    canvas{ position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index:8; }
+  </style>
+</head>
+<body>
+  <div class="wrap" role="main" aria-live="polite">
+    <canvas id="confettiCanvas"></canvas>
+    <div class="greeting" id="greet">Secure Payment</div>
+    <div class="sub" id="sub">Complete the ₹5,000 initial fee to confirm your registration.</div>
+
+    <div class="pulse" aria-hidden="true"></div>
+
+    <div class="upi">UPI ID: <strong id="upi">9546384579-2@ybl</strong></div>
+
+    <div class="small">Tap copy and complete payment from your UPI app. After paying, click <strong>"I Have Paid"</strong>.</div>
+
+    <div class="data-list" id="appData" role="region" aria-label="Application summary">
+      <!-- JS populates -->
+    </div>
+
+    <div style="margin-top:14px;">
+      <button class="btn" id="copyBtn">Copy UPI</button>
+      <button class="btn alt" id="paidBtn">I Have Paid</button>
+    </div>
+
+    <div id="thank" style="display:none; margin-top:14px;">
+      <h3 style="margin:14px 0 6px; color:#cbd5ff">Thank you!</h3>
+      <p style="color:#d1d6ff; margin:0 0 8px;">Our placement team will contact you shortly.</p>
+      <p style="color:#c9cfe8; font-size:13px; margin-top:6px;">If you used WhatsApp to send the application earlier, please keep that chat handy as confirmation.</p>
+    </div>
+  </div>
+
+  <script>
+    // Load submission from localStorage
+    const STORAGE_KEY = 'jobfinder_submission';
+    const dataRaw = localStorage.getItem(STORAGE_KEY);
+    const data = dataRaw ? JSON.parse(dataRaw) : null;
+
+    const greet = document.getElementById('greet');
+    const appData = document.getElementById('appData');
+
+    if(data && data.name){
+      greet.textContent = `Hello, ${data.name}!`;
+    }
+
+    // Build summary
+    if(data){
+      const html = `
+        <div><strong>Name:</strong> ${escapeHtml(data.name)}</div>
+        <div><strong>Phone:</strong> ${escapeHtml(data.phone)}</div>
+        <div><strong>Age:</strong> ${escapeHtml(data.age)}</div>
+        <div><strong>Qualification:</strong> ${escapeHtml(data.qualification)} ${data.degreeName ? '('+escapeHtml(data.degreeName)+')' : ''}</div>
+        <div><strong>Location:</strong> ${escapeHtml(data.location)}</div>
+        <div><strong>Skills:</strong> ${escapeHtml(data.skills || '-')}</div>
+      `;
+      appData.innerHTML = html;
+    } else {
+      appData.innerHTML = "<div>No application summary found. You can return to the form to submit your details.</div>";
+    }
+
+    // copy UPI
+    document.getElementById('copyBtn').addEventListener('click', async () => {
+      const upi = document.getElementById('upi').textContent;
+      try {
+        await navigator.clipboard.writeText(upi);
+        alert('UPI ID copied to clipboard. Complete payment in your UPI app.');
+      } catch(e){
+        prompt('Copy UPI ID:', upi);
+      }
+    });
+
+    // Paid button -> show thanks + confetti
+    document.getElementById('paidBtn').addEventListener('click', () => {
+      document.getElementById('paidBtn').disabled = true;
+      document.getElementById('copyBtn').disabled = true;
+      showThankYou();
+      startConfetti();
+      // Normally you'd notify your backend here to verify payment or record submission.
+      // For now we simply show success.
+    });
+
+    function escapeHtml(str){
+      if(!str) return '';
+      return String(str).replace(/[&<>"']/g, (m)=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]));
+    }
+
+    // ------------- simple confetti -------------
+    function startConfetti(){
+      const canvas = document.getElementById('confettiCanvas');
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+      const ctx = canvas.getContext('2d');
+      const pieces = [];
+      const colors = ['#f97316','#f59e0b','#10b981','#60a5fa','#a78bfa','#ef4444'];
+      for(let i=0;i<80;i++){
+        pieces.push({
+          x: Math.random()*canvas.width,
+          y: Math.random()*canvas.height - canvas.height,
+          r: (Math.random()*6)+4,
+          color: colors[Math.floor(Math.random()*colors.length)],
+          d: Math.random()*2 + 1,
+          tilt: Math.random()*10 - 10,
+          tiltSpeed: Math.random()*0.1 + 0.05
+        });
+      }
+      let raf;
+      function draw(){
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        for(let p of pieces){
+          ctx.beginPath();
+          ctx.fillStyle = p.color;
+          const x = p.x + Math.sin(p.tilt/10);
+          const y = p.y;
+          ctx.fillRect(x, y, p.r, p.r*0.6);
+          p.tilt += p.tiltSpeed;
+          p.y += p.d + Math.sin(p.tilt/5);
+          if(p.y > canvas.height){
+            p.y = -10;
+            p.x = Math.random()*canvas.width;
+          }
+        }
+        raf = requestAnimationFrame(draw);
+      }
+      draw();
+      // stop confetti after 6 seconds
+      setTimeout(()=>{ cancelAnimationFrame(raf); ctx.clearRect(0,0,canvas.width,canvas.height); }, 6000);
+    }
+
+    function showThankYou(){
+      document.getElementById('thank').style.display = 'block';
+      document.getElementById('sub').style.display = 'none';
+      // Optionally clear stored submission after confirmation:
+      // localStorage.removeItem(STORAGE_KEY);
+    }
+  </script>
+</body>
+</html>

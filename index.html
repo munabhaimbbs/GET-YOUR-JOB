@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>JobFinder — Application</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0f1724; --card:#1a2236; --muted:#cfcfcf; --accent1:#7c3aed; --accent2:#6d28d9;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;
+      background:linear-gradient(180deg,#071028 0%, var(--bg) 100%); color:#fff;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+      padding:32px;
+    }
+    .container{
+      max-width:760px; margin:28px auto; background:var(--card); border-radius:14px; padding:28px;
+      box-shadow:0 12px 40px rgba(2,6,23,0.6);
+    }
+    header{ text-align:center; margin-bottom:8px }
+    h1{
+      font-size:28px; margin:0;
+      background:linear-gradient(90deg,#8b5cf6,#6366f1,#a855f7);
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    }
+    .lead{ text-align:center; color:var(--muted); margin:6px 0 18px; }
+    .stats{ text-align:center; color:#d6ccff; font-weight:600; margin-bottom:14px; }
+    form{ display:grid; gap:10px; grid-template-columns:1fr 1fr; }
+    label{ display:block; font-size:13px; color:#e6e6e6; margin-bottom:6px; font-weight:600; }
+    .full { grid-column: 1 / -1; }
+    input, select, textarea{
+      width:100%; padding:10px 12px; border-radius:8px; border:none; background:#222b44; color:#fff;
+      font-size:14px;
+    }
+    textarea{ min-height:80px; resize:vertical; }
+    input:focus, select:focus, textarea:focus{ outline:2px solid rgba(124,58,237,0.18); }
+    .actions{ display:flex; gap:10px; margin-top:8px; grid-column:1 / -1; }
+    .btn{
+      flex:1; padding:12px 14px; border-radius:10px; border:none; font-weight:700; cursor:pointer;
+      background:linear-gradient(90deg,var(--accent1),var(--accent2)); box-shadow:0 6px 20px rgba(124,58,237,0.25);
+      color:#fff; transition:transform .18s ease, box-shadow .18s ease;
+    }
+    .btn:hover{ transform:translateY(-4px); box-shadow:0 18px 40px rgba(124,58,237,0.35); }
+    .btn.alt{ background:#2b3550; box-shadow:none; font-weight:600; color:#d7d7d7; }
+    .muted { color:#aeb3c3; font-size:13px; text-align:center; grid-column:1 / -1; margin-top:6px; }
+    footer{ text-align:center; color:#90949e; font-size:13px; margin-top:18px; }
+    @media (max-width:720px){
+      form{ grid-template-columns:1fr; }
+      .actions{ flex-direction:column; }
+    }
+    .note { font-size:13px; color:#cfcfcf; }
+  </style>
+</head>
+<body>
+  <div class="container" role="main">
+    <header>
+      <h1>JobFinder</h1>
+      <p class="lead">Trusted placement support • 100% money-back guarantee if we can’t place you</p>
+      <div class="stats">We’ve helped <strong>1,205+</strong> people find work</div>
+    </header>
+
+    <form id="jobForm" autocomplete="off" novalidate>
+      <div>
+        <label for="name">Full Name</label>
+        <input id="name" name="name" required/>
+      </div>
+
+      <div>
+        <label for="age">Age</label>
+        <input id="age" name="age" type="number" min="14" max="99" required/>
+      </div>
+
+      <div>
+        <label for="qualification">Highest Qualification</label>
+        <select id="qualification" name="qualification" required>
+          <option value="below_10th">Below 10th</option>
+          <option value="10th">10th</option>
+          <option value="12th">12th</option>
+          <option value="degree">Any Degree</option>
+        </select>
+      </div>
+
+      <div id="degreeWrap" style="display:none;">
+        <label for="degreeName">Degree Name</label>
+        <input id="degreeName" name="degreeName"/>
+      </div>
+
+      <div class="full">
+        <label for="location">Current Location</label>
+        <input id="location" name="location" placeholder="City / Area (e.g. Mumbai, Andheri)" required/>
+      </div>
+
+      <div>
+        <label for="phone">Mobile Number</label>
+        <input id="phone" name="phone" placeholder="+91 7XXXXXXXXX" required/>
+      </div>
+
+      <div>
+        <label for="skills">Skills / Preferred Role</label>
+        <input id="skills" name="skills" placeholder="e.g. sales, delivery, customer care"/>
+      </div>
+
+      <div class="full note">
+        By clicking *Send via WhatsApp* you will open WhatsApp with a pre-filled message — the user must press **Send** to deliver the application. This is a WhatsApp-approved flow.
+      </div>
+
+      <div class="actions full">
+        <button class="btn" id="waSend" type="button">Send via WhatsApp & Proceed to Payment</button>
+        <button class="btn alt" id="mailtoSend" type="button">Open Email (fallback)</button>
+      </div>
+
+      <div class="muted full">
+        <div>Application Fee: <strong>₹5,000</strong> now + <strong>₹5,000</strong> after placement • UPI ID: <strong>9546384579-2@ybl</strong></div>
+      </div>
+    </form>
+
+    <footer>
+      Contact: mp7342943@gmail.com | +91 7858094972
+    </footer>
+  </div>
+
+  <script>
+    // --- Configuration: change this if needed ---
+    const ADMIN_WA_NUMBER = "917858094972"; // +91 7858094972 -> international no spaces
+    const SUPPORT_EMAIL = "mp7342943@gmail.com";
+    // -----------------------------------------
+
+    // UI wiring
+    const qualification = document.getElementById('qualification');
+    const degreeWrap = document.getElementById('degreeWrap');
+    qualification.addEventListener('change', () => {
+      degreeWrap.style.display = qualification.value === 'degree' ? 'block' : 'none';
+    });
+
+    // Utility: get form values and validate simply
+    function collectFormData(){
+      const data = {
+        name: document.getElementById('name').value.trim(),
+        age: document.getElementById('age').value.trim(),
+        qualification: document.getElementById('qualification').value,
+        degreeName: document.getElementById('degreeName').value.trim(),
+        location: document.getElementById('location').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        skills: document.getElementById('skills').value.trim()
+      };
+      return data;
+    }
+
+    function simpleValidate(data){
+      if(!data.name) return "Please enter full name.";
+      if(!data.age) return "Please enter age.";
+      if(!data.location) return "Please enter location.";
+      if(!data.phone) return "Please enter mobile number.";
+      return null;
+    }
+
+    // Build WhatsApp message and open wa.me link
+    document.getElementById('waSend').addEventListener('click', () => {
+      const data = collectFormData();
+      const validationError = simpleValidate(data);
+      if(validationError){ alert(validationError); return; }
+
+      // format message
+      const message =
+`*New Job Application — JobFinder*
+
+👤 Name: ${data.name}
+🎂 Age: ${data.age}
+🎓 Qualification: ${data.qualification}${data.degreeName ? " — " + data.degreeName : ""}
+📍 Location: ${data.location}
+📞 Phone: ${data.phone}
+💼 Skills / Preferred Role: ${data.skills || "-"}
+
+Please confirm receipt.`;
+
+      const encoded = encodeURIComponent(message);
+      const waLink = `https://wa.me/${ADMIN_WA_NUMBER}?text=${encoded}`;
+
+      // store full submission for payment page
+      localStorage.setItem('jobfinder_submission', JSON.stringify(data));
+
+      // open WhatsApp (user must press Send)
+      window.open(waLink, '_blank');
+
+      // redirect to payment page after short delay (gives user time to send)
+      setTimeout(() => { window.location.href = 'payment.html'; }, 1800);
+    });
+
+    // Mailto fallback (opens user's email client with body)
+    document.getElementById('mailtoSend').addEventListener('click', () => {
+      const data = collectFormData();
+      const validationError = simpleValidate(data);
+      if(validationError){ alert(validationError); return; }
+
+      const subject = encodeURIComponent('New Job Application — ' + (data.name || 'Applicant'));
+      const body = encodeURIComponent(
+`Name: ${data.name}
+Age: ${data.age}
+Qualification: ${data.qualification} ${data.degreeName ? '('+data.degreeName+')' : ''}
+Location: ${data.location}
+Phone: ${data.phone}
+Skills/Preferred Role: ${data.skills || '-'}
+
+-- JobFinder`
+      );
+
+      localStorage.setItem('jobfinder_submission', JSON.stringify(data));
+      window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
+
+      // optional redirect to payment
+      setTimeout(() => { window.location.href = 'payment.html'; }, 1500);
+    });
+  </script>
+</body>
+</html>
